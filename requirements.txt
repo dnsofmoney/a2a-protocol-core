@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+sqlalchemy
+alembic
+httpx
+pytest
+pytest-asyncio
+cryptography
