@@ -194,3 +194,53 @@ def normalize_endpoint(body: NormalizeBody) -> dict[str, Any]:
         )
     except Exception as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+# ── A2A-041: Payment Hook ────────────────────────────────────────────────────
+
+class A2APaymentHookBody(BaseModel):
+    task_id: str
+    agent_id: str
+    payee_alias: str
+    amount: str
+    currency: str = "USD"
+
+
+@router.post("/v1/a2a/payment-hook")
+def a2a_payment_hook(body: A2APaymentHookBody, request: Request) -> dict[str, Any]:
+    """
+    A2A-041 Payment Hook — bridges A2A compute marketplace receipt moments
+    to multi-rail payment settlement via FAS-1 alias resolution.
+    """
+    import hashlib
+    from datetime import datetime, timezone
+    from uuid import uuid4
+
+    # Validate pay: alias format
+    if not body.payee_alias.startswith("pay:"):
+        raise HTTPException(status_code=422, detail="payee_alias must be a pay: URI")
+
+    # Deterministic hook ID
+    hook_seed = f"a2a-041:{body.task_id}:{body.agent_id}:{body.payee_alias}"
+    hook_id = "a2a-041-" + hashlib.sha256(hook_seed.encode()).hexdigest()[:16]
+
+    # Resolve alias
+    record = request.app.state.resolver.resolve(body.payee_alias)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Alias {body.payee_alias} not found")
+
+    # Select rail and simulate settlement
+    endpoint = request.app.state.resolver.select_rail(record)
+
+    return {
+        "hook_id": hook_id,
+        "task_id": body.task_id,
+        "agent_id": body.agent_id,
+        "payee_alias": body.payee_alias,
+        "amount": body.amount,
+        "currency": body.currency,
+        "status": "SETTLED",
+        "rail": endpoint.rail,
+        "iso_ref": record.iso_hint,
+        "settled_at": datetime.now(timezone.utc).isoformat(),
+    }
