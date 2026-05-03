@@ -244,3 +244,30 @@ def a2a_payment_hook(body: A2APaymentHookBody, request: Request) -> dict[str, An
         "iso_ref": record.iso_hint,
         "settled_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# ── A2A-042: AP2 Mandate Bridge ──────────────────────────────────────────────
+
+from app.bridges.ap2 import (  # noqa: E402  (intentional late import)
+    PaymentMandate,
+    bridge_mandate_to_hook,
+)
+
+
+@router.post("/v1/a2a/ap2-bridge")
+def a2a_ap2_bridge(mandate: PaymentMandate, request: Request) -> dict[str, Any]:
+    """
+    A2A-042 AP2 Mandate Bridge — accepts a closed AP2 PaymentMandate and
+    forwards it to the A2A-041 Payment Hook for actual settlement.
+    """
+    def _call_hook(body: dict[str, Any]) -> dict[str, Any]:
+        return a2a_payment_hook(A2APaymentHookBody(**body), request)
+
+    result = bridge_mandate_to_hook(mandate, payment_hook_caller=_call_hook)
+
+    if result.bridge_status == "REJECTED":
+        # 422 for shape/expiry/alias problems; 409 for idempotency replay.
+        status_code = 409 if result.rejection_reason == "MANDATE_ALREADY_SETTLED" else 422
+        raise HTTPException(status_code=status_code, detail=result.rejection_reason)
+
+    return result.model_dump()
