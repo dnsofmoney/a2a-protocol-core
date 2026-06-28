@@ -1,0 +1,45 @@
+# Publish a2a-protocol-core to PyPI on a version tag.
+#
+# This file is staged INSIDE the package dir so that when the package is
+# subtree-split into its own repo (dnsofmoney/a2a-protocol-core), it lands at
+# that repo's root as .github/workflows/publish.yml and runs automatically.
+#
+# Uses PyPI Trusted Publishing (OIDC) — no API token stored in secrets.
+# One-time setup: on pypi.org add a "pending publisher" for project
+# `a2a-protocol-core`, repo `dnsofmoney/a2a-protocol-core`, workflow
+# `publish.yml`, environment `pypi`. See PUBLISHING.md.
+
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: pytest -q
+
+  build-and-publish:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # required for OIDC trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build
+      - run: python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
