@@ -34,8 +34,19 @@ from a2a_protocol_core.semantic_normalizer import (
     normalize_action,
     normalize_message,
 )
+from a2a_protocol_core.x402_pay import (
+    AttestationSummary,
+    X402PaymentResult,
+    X402PayError,
+    attest_settled_payment,
+    build_x_payment_header,
+    decode_payment_required,
+    fetch_requirement,
+    pay_alias_xrp,
+    summarize_attestation,
+)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "__version__",
@@ -59,4 +70,14 @@ __all__ = [
     "A2ACapabilities",
     # client
     "A2APaymentHookClient",
+    # x402 pay-path (one-call; signing needs the [xrpl] extra)
+    "pay_alias_xrp",
+    "attest_settled_payment",
+    "fetch_requirement",
+    "decode_payment_required",
+    "build_x_payment_header",
+    "summarize_attestation",
+    "AttestationSummary",
+    "X402PaymentResult",
+    "X402PayError",
 ]

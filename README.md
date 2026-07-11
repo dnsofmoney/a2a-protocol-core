@@ -57,6 +57,47 @@ print(result.settlement_result.status, result.iso_message_ref)
 
 See [`examples/trigger_payment_hook.py`](examples/trigger_payment_hook.py).
 
+## Pay a `pay:` alias in one call (non-custodial)
+
+Resolve the price, pay from **your own wallet**, and get back a signed
+resolve/verify/OFAC-screen attestation — one function, and your seed never leaves
+your process:
+
+```bash
+pip install "a2a-protocol-core[xrpl]"
+```
+
+```python
+from a2a_protocol_core import pay_alias_xrp
+
+result = pay_alias_xrp(
+    base_url="https://api.dnsofmoney.com",
+    alias="pay:vendor.alpha",
+    amount_xrp="0.10",
+    seed="s...",             # YOUR XRPL wallet seed — signs locally, never transmitted
+    api_key="fas_live_...",  # attributes the settle leg
+)
+print(result.tx_hash, result.summary.verdict)   # e.g. "A1B2…", "CLEAR"
+```
+
+Already settled the payment through your own wallet stack (or a Coinbase Agentic
+Wallet)? Skip the signing and just fetch the attestation — no `[xrpl]` extra:
+
+```python
+from a2a_protocol_core import attest_settled_payment
+
+result = attest_settled_payment(
+    base_url="https://api.dnsofmoney.com",
+    alias="pay:vendor.alpha",
+    amount_xrp="0.10",
+    tx_hash="A1B2C3...",     # your already-validated XRPL tx
+    api_key="fas_live_...",
+)
+```
+
+DNS of Money **verifies an already-settled transaction and returns metadata** — it
+never holds your keys or your funds.
+
 ## Why canonical hashing?
 
 Two agents describing the same payment with different words ("send" vs
