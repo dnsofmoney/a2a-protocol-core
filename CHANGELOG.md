@@ -3,7 +3,23 @@
 All notable changes to `a2a-protocol-core` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.2.0] — Unreleased
+## [0.2.1] — 2026-07-20
+
+Conformance fix for the XRPL exact scheme's field placement. Required before
+the server drops its deprecated top-level mirrors (scheduled after 2026-10-01)
+— a 0.2.0 client will stop attaching `InvoiceID` at that point and be rejected
+by the server's mandatory invoice binding.
+
+### Fixed
+- `pay_alias_xrp` now reads `invoiceId` and `sourceTag` from the x402
+  requirement's `extra` block, where the XRPL exact scheme
+  (`scheme_exact_xrpl.md`) places them, falling back to the deprecated
+  top-level mirrors for not-yet-updated servers. Previously only the top-level
+  copies were read, so a spec-conformant server that stopped mirroring them
+  would silently produce payments without `InvoiceID` — which the invoice
+  binding (the anti-replay mechanism) mandatorily rejects.
+
+## [0.2.0] — 2026-07-11
 
 Adds the one-call x402 pay-path so an agent can pay a `pay:` alias from its own
 wallet — the "make it actually easy" client, still fully non-custodial.

@@ -239,14 +239,19 @@ def pay_alias_xrp(
     """
     http = session or requests.Session()
     req = fetch_requirement(base_url=base_url, alias=alias, amount_xrp=amount_xrp, session=http, timeout=timeout)
-    invoice = req.get("invoiceId")
+    # The XRPL exact scheme carries scheme fields in `extra`; the top-level copies
+    # are our own deprecated mirrors (removed after 2026-10-01). Prefer `extra`, fall
+    # back to top-level so this client still works against not-yet-updated servers.
+    extra = req.get("extra") or {}
+    invoice = extra.get("invoiceId") or req.get("invoiceId")
+    source_tag = extra.get("sourceTag") if extra.get("sourceTag") is not None else req.get("sourceTag")
     tx_hash, payer = _sign_and_submit_xrp(
         pay_to=req["payTo"],
         drops=req["maxAmountRequired"],
         seed=seed,
         rpc_url=xrpl_rpc_url,
         invoice_id=invoice_id_hash(invoice) if invoice else None,
-        source_tag=req.get("sourceTag"),
+        source_tag=source_tag,
     )
     body = _settle(
         base_url=base_url,
