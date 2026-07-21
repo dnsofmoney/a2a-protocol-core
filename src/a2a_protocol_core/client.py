@@ -26,6 +26,7 @@ from typing import Optional, Union
 
 import requests
 
+from a2a_protocol_core._retry import get_with_retries
 from a2a_protocol_core.schemas import (
     A2ACapabilities,
     A2APaymentHookRequest,
@@ -33,6 +34,20 @@ from a2a_protocol_core.schemas import (
 )
 
 DEFAULT_TIMEOUT = 30
+
+
+class A2AClientError(RuntimeError):
+    """HTTP-level failure from the A2A surface, with response context attached.
+
+    Carries ``status_code`` and a ``body`` snippet so an agent can branch on the
+    failure (409 duplicate job vs 422 validation vs 5xx) instead of parsing a
+    bare ``requests.HTTPError`` string.
+    """
+
+    def __init__(self, message: str, *, status_code: Optional[int] = None, body: Optional[str] = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body
 
 
 class A2APaymentHookClient:
@@ -49,6 +64,10 @@ class A2APaymentHookClient:
         self.verify_ssl = verify_ssl
         self.timeout = timeout
         self._session = session or requests.Session()
+        if not verify_ssl:
+            # Session-wide so the retried GET honors it too (only set when the
+            # caller explicitly opted out of TLS verification).
+            self._session.verify = False
 
     def _headers(self) -> dict:
         headers = {"Content-Type": "application/json"}
@@ -57,14 +76,19 @@ class A2APaymentHookClient:
         return headers
 
     def capabilities(self) -> A2ACapabilities:
-        """Fetch the server's advertised A2A capabilities."""
-        resp = self._session.get(
+        """Fetch the server's advertised A2A capabilities (idempotent — retried)."""
+        resp = get_with_retries(
+            self._session,
             f"{self.base_url}/v1/a2a/capabilities",
             headers=self._headers(),
-            verify=self.verify_ssl,
             timeout=self.timeout,
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            raise A2AClientError(
+                f"capabilities failed {resp.status_code}: {resp.text[:300]}",
+                status_code=resp.status_code,
+                body=resp.text[:300],
+            )
         return A2ACapabilities.model_validate(resp.json())
 
     def trigger(
@@ -93,6 +117,10 @@ class A2APaymentHookClient:
             semantic_hash=semantic_hash,
             receipt_ref=receipt_ref,
         )
+        # POST is sent exactly once — it triggers settlement, so the client never
+        # auto-retries it. On a transient failure, re-send with the SAME job_id +
+        # semantic_hash: the server derives its idempotency key from that pair, so
+        # a duplicate returns the stored outcome instead of settling twice.
         resp = self._session.post(
             f"{self.base_url}/v1/a2a/payment-hook",
             data=request.model_dump_json(),
@@ -100,5 +128,10 @@ class A2APaymentHookClient:
             verify=self.verify_ssl,
             timeout=self.timeout,
         )
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            raise A2AClientError(
+                f"payment hook failed {resp.status_code}: {resp.text[:300]}",
+                status_code=resp.status_code,
+                body=resp.text[:300],
+            )
         return A2APaymentHookResponse.model_validate(resp.json())

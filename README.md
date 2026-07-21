@@ -27,6 +27,9 @@ Runtime deps are intentionally minimal: `pydantic` and `requests`.
 | `canonical_hash` | A2A-008 | metadata- & vocabulary-stable payment-intent hash |
 | `schemas` | A2A-041 | payment-hook request/response wire models |
 | `client` | A2A-041 | `A2APaymentHookClient` over `/v1/a2a/*` |
+| `x402_pay` | x402 | one-call pay: XRP on XRPL (`[xrpl]`) / USDC on Algorand (`[algorand]`) |
+| `screen` | x402 | paid counterparty screen — "screen before you pay" |
+| `attestation_verify` | did:web | verify the attestation's Ed25519 proof (`[verify]`) |
 
 ## Quick start
 
@@ -97,6 +100,69 @@ result = attest_settled_payment(
 
 DNS of Money **verifies an already-settled transaction and returns metadata** — it
 never holds your keys or your funds.
+
+## Pay in USDC on Algorand (the priced endpoints)
+
+DNS of Money's own paid endpoints declare their price in USDC on Algorand.
+`pay_alias_usdc_algorand` (or the rail-dispatching `pay_alias`) signs the USDC
+transfer leg locally via the **official x402 client mechanisms** — omit the
+amount and the server quotes its declared, enforced price:
+
+```bash
+pip install "a2a-protocol-core[algorand]"
+```
+
+```python
+from a2a_protocol_core import pay_alias_usdc_algorand
+
+result = pay_alias_usdc_algorand(
+    base_url="https://api.dnsofmoney.com",
+    alias="pay:dnsofmoney",
+    api_key="fas_live_...",
+    mnemonic="...your 25-word Algorand mnemonic...",  # signs locally, never sent
+)
+print(result.tx_hash, result.summary.verdict)
+```
+
+## Screen before you pay
+
+Pay the screening fee, get an OFAC + resolution attestation about a
+**caller-named** target — a `pay:` alias or a raw any-chain address — before you
+send it money:
+
+```python
+from a2a_protocol_core import screen
+
+result = screen(
+    base_url="https://api.dnsofmoney.com",
+    target="pay:vendor.alpha",
+    api_key="fas_live_...",
+    algorand_mnemonic="...",   # fee is USDC on Algorand (server-priced)
+    verify=True,               # also check the attestation signature
+)
+if result.verdict == "CLEAR":
+    ...  # proceed to pay the vendor
+```
+
+## Verify the attestation yourself
+
+Attestations are W3C Verifiable Credentials signed `eddsa-jcs-2022` by a
+`did:web` issuer. `verify_attestation` resolves the issuer's DID document,
+enforces `assertionMethod` authorization, and checks the Ed25519 signature —
+so the proof chain ends at *your* process, not at TLS:
+
+```bash
+pip install "a2a-protocol-core[verify]"
+```
+
+```python
+from a2a_protocol_core import verify_attestation
+
+v = verify_attestation(result.attestation, expected_issuer="did:web:dnsofmoney.com")
+assert v.verified
+```
+
+An unsigned attestation **fails** verification by design.
 
 ## Why canonical hashing?
 

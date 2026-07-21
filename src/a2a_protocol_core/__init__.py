@@ -19,7 +19,7 @@ from a2a_protocol_core.addressing import (
     is_valid_pay_uri,
 )
 from a2a_protocol_core.canonical_hash import compute_canonical_hash
-from a2a_protocol_core.client import A2APaymentHookClient
+from a2a_protocol_core.client import A2AClientError, A2APaymentHookClient
 from a2a_protocol_core.schemas import (
     A2ACapabilities,
     A2APaymentHookRequest,
@@ -34,19 +34,36 @@ from a2a_protocol_core.semantic_normalizer import (
     normalize_action,
     normalize_message,
 )
+from a2a_protocol_core.attestation_verify import (
+    AttestationVerification,
+    AttestationVerificationError,
+    did_web_document_url,
+    fetch_did_document,
+    verify_attestation,
+)
+from a2a_protocol_core.screen import (
+    ScreenResult,
+    fetch_screen_requirement_header,
+    screen,
+    screen_with_payment_header,
+)
 from a2a_protocol_core.x402_pay import (
     AttestationSummary,
     X402PaymentResult,
     X402PayError,
     attest_settled_payment,
+    build_avm_payment_header,
     build_x_payment_header,
     decode_payment_required,
     fetch_requirement,
+    fetch_requirement_header,
+    pay_alias,
+    pay_alias_usdc_algorand,
     pay_alias_xrp,
     summarize_attestation,
 )
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 __all__ = [
     "__version__",
@@ -70,14 +87,30 @@ __all__ = [
     "A2ACapabilities",
     # client
     "A2APaymentHookClient",
-    # x402 pay-path (one-call; signing needs the [xrpl] extra)
+    "A2AClientError",
+    # x402 pay-path (one-call; XRP signing needs [xrpl], USDC needs [algorand])
+    "pay_alias",
     "pay_alias_xrp",
+    "pay_alias_usdc_algorand",
     "attest_settled_payment",
     "fetch_requirement",
+    "fetch_requirement_header",
     "decode_payment_required",
     "build_x_payment_header",
+    "build_avm_payment_header",
     "summarize_attestation",
     "AttestationSummary",
     "X402PaymentResult",
     "X402PayError",
+    # paid counterparty screen ("screen before you pay")
+    "screen",
+    "screen_with_payment_header",
+    "fetch_screen_requirement_header",
+    "ScreenResult",
+    # attestation verification (signature checking needs the [verify] extra)
+    "verify_attestation",
+    "fetch_did_document",
+    "did_web_document_url",
+    "AttestationVerification",
+    "AttestationVerificationError",
 ]
