@@ -4,3 +4,11 @@ build/
 .pytest_cache/
 __pycache__/
 *.pyc
+
+# Spec packages and generated docs (artifacts, not source)
+*.zip
+*.docx
+*.pdf
+
+# Local databases
+*.db
