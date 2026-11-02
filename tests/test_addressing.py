@@ -1,6 +1,7 @@
 import pytest
+from pydantic import BaseModel, Field, ValidationError
 
-from a2a_protocol_core.addressing import assert_valid_pay_uri, is_valid_pay_uri
+from a2a_protocol_core.addressing import PAY_URI_PATTERN, assert_valid_pay_uri, is_valid_pay_uri
 
 
 @pytest.mark.parametrize(
@@ -22,15 +23,28 @@ def test_valid_uris(uri):
     "uri",
     [
         "",
-        "alice",            # missing scheme
-        "pay:",             # empty body
-        "pay:-alice",       # leading hyphen
-        "pay:Alice",        # uppercase
-        "pay:a..b",         # empty label
+        "alice",  # missing scheme
+        "pay:",  # empty body
+        "pay:-alice",  # leading hyphen
+        "pay:Alice",  # uppercase
+        "pay:a..b",  # empty label
         "pay:" + "a" * 130,  # too long
+        "pay:a\n",  # trailing newline ($ would match before it)
+        "pay:a\nb",  # embedded newline
     ],
 )
 def test_invalid_uris(uri):
     assert not is_valid_pay_uri(uri)
     with pytest.raises(ValueError):
         assert_valid_pay_uri(uri)
+
+
+def test_pattern_text_works_as_pydantic_pattern():
+    # PAY_URI_PATTERN is public. Its .pattern text must stay valid for
+    # pydantic-core's regex engine, which rejects \Z.
+    class Model(BaseModel):
+        address: str = Field(pattern=PAY_URI_PATTERN.pattern)
+
+    assert Model(address="pay:vendor.alpha").address == "pay:vendor.alpha"
+    with pytest.raises(ValidationError):
+        Model(address="pay:a\n")

@@ -12,6 +12,9 @@ import re
 
 # pay:<label>(.<label>)*  — labels are lowercase alphanumeric + hyphen,
 # 1..63 chars, no leading hyphen. Total length capped at 128.
+# Always apply it with fullmatch, never match: Python's $ also matches before a
+# final "\n", so match() would pass "pay:a\n". The pattern keeps $ (not \Z) so
+# its .pattern text stays valid in pydantic and JSON Schema, where $ is the end.
 PAY_URI_PATTERN = re.compile(r"^pay:[a-z0-9][a-z0-9\-]{0,62}(\.[a-z0-9][a-z0-9\-]{0,62})*$")
 
 MAX_PAY_URI_LENGTH = 128
@@ -19,7 +22,7 @@ MAX_PAY_URI_LENGTH = 128
 
 def is_valid_pay_uri(value: str) -> bool:
     """Return True if ``value`` is a syntactically valid ``pay:`` URI."""
-    return bool(PAY_URI_PATTERN.match(value)) and len(value) <= MAX_PAY_URI_LENGTH
+    return bool(PAY_URI_PATTERN.fullmatch(value)) and len(value) <= MAX_PAY_URI_LENGTH
 
 
 def assert_valid_pay_uri(value: str) -> str:
