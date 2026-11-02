@@ -22,12 +22,14 @@ def test_valid_uris(uri):
     "uri",
     [
         "",
-        "alice",            # missing scheme
-        "pay:",             # empty body
-        "pay:-alice",       # leading hyphen
-        "pay:Alice",        # uppercase
-        "pay:a..b",         # empty label
+        "alice",  # missing scheme
+        "pay:",  # empty body
+        "pay:-alice",  # leading hyphen
+        "pay:Alice",  # uppercase
+        "pay:a..b",  # empty label
         "pay:" + "a" * 130,  # too long
+        "pay:a\n",  # trailing newline ($ would match before it)
+        "pay:a\nb",  # embedded newline
     ],
 )
 def test_invalid_uris(uri):

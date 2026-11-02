@@ -3,6 +3,21 @@
 All notable changes to `a2a-protocol-core` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `is_valid_pay_uri` accepted a final newline: `re.match` with `$` passed
+  `"pay:a\n"`. `PAY_URI_PATTERN` now ends in `\Z` and the check uses
+  `fullmatch`. The TS and Go ports already rejected it.
+
+### Added
+
+- `tests/vectors/extended_vectors.json` and its generator
+  `gen_extended_vectors.py`. They pin float repr, bool-as-int, big ints, escapes,
+  `str.strip()` separators, nested values, the X-PAYMENT header bytes and the
+  InvoiceID hash. The TS and Go suites assert against the same file.
+
 ## [0.3.0] — 2026-07-20
 
 The version where the SDK can buy and verify the product end to end: pay DNS of
