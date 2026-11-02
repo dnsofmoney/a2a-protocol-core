@@ -1,11 +1,13 @@
 """
-Generate the Go SDK's extended cross-language vectors from the Python
-reference implementation (a2a-protocol-core, the source of truth).
+Generate the extended cross-language vectors from the Python reference
+implementation (a2a-protocol-core, the source of truth).
 
-    py -I testdata/gen_extended_vectors.py <path-to-a2a-protocol-core/src>
+    py -I tests/vectors/gen_extended_vectors.py src
 
-Writes extended_vectors.json next to this file. Each request is stored as JSON
-TEXT, so the Go test decodes the same bytes that json.loads reads here, with
+Writes extended_vectors.json next to this file. Copy the identical file into
+the TS package (dns-of-money/sdk/a2a-protocol-core/test/vectors/) and the Go
+SDK (dns-of-money-go/testdata/). Each request is stored as JSON TEXT, so the
+other suites decode the same bytes that json.loads reads here, with
 the int/float difference intact (10 vs 10.0). Never hand-edit the hashes.
 
 These cases cover what canonical_vectors.json does not: Python float repr,

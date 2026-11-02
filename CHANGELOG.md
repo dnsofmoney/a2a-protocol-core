@@ -8,8 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - `is_valid_pay_uri` accepted a final newline: `re.match` with `$` passed
-  `"pay:a\n"`. `PAY_URI_PATTERN` now ends in `\Z` and the check uses
-  `fullmatch`. The TS and Go ports already rejected it.
+  `"pay:a\n"`. The check now uses `fullmatch`. The TS and Go ports already
+  rejected it. `PAY_URI_PATTERN` keeps its `$`, so `PAY_URI_PATTERN.pattern`
+  still works as a pydantic or JSON Schema `pattern`. Apply the compiled
+  pattern with `fullmatch`, not `match`.
 
 ### Added
 

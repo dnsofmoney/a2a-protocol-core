@@ -12,9 +12,10 @@ import re
 
 # pay:<label>(.<label>)*  — labels are lowercase alphanumeric + hyphen,
 # 1..63 chars, no leading hyphen. Total length capped at 128.
-# Anchored with \Z, not $: Python's $ also matches before a final "\n", so
-# "pay:a\n" would pass. The TS and Go ports reject it, and so must this one.
-PAY_URI_PATTERN = re.compile(r"^pay:[a-z0-9][a-z0-9\-]{0,62}(\.[a-z0-9][a-z0-9\-]{0,62})*\Z")
+# Always apply it with fullmatch, never match: Python's $ also matches before a
+# final "\n", so match() would pass "pay:a\n". The pattern keeps $ (not \Z) so
+# its .pattern text stays valid in pydantic and JSON Schema, where $ is the end.
+PAY_URI_PATTERN = re.compile(r"^pay:[a-z0-9][a-z0-9\-]{0,62}(\.[a-z0-9][a-z0-9\-]{0,62})*$")
 
 MAX_PAY_URI_LENGTH = 128
 
